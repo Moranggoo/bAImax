@@ -25,20 +25,28 @@ if not os.environ.get("GOOGLE_API_KEY"):
 
 from google import genai
 client = genai.Client()
+
+session_service = InMemorySessionService()
+runner = Runner(session_service=session_service)
+
 MODEL_ID = "gemini-2.5-flash-preview-04-17-thinking"
 
 
 # Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
-#@st.cache_data(show_spinner=False)
+#@st.cache_data(show_spinner=False) # Remova o cache para testar inicialmente
 def call_agent(_agent: Agent, message_text: str) -> str:
+    session_id = "consultorio"
+    user_id = "paciente"
 
-    session_service = InMemorySessionService()
-    session = session_service.create_session(app_name=_agent.name, user_id="paciente", session_id="consultorio")
-    runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service)
+    # Tenta obter a sessão, se não existir, cria uma
+    try:
+        session = session_service.get_session(app_name=_agent.name, user_id=user_id, session_id=session_id)
+    except KeyError:
+        session = session_service.create_session(app_name=_agent.name, user_id=user_id, session_id=session_id)
+
     content = types.Content(role="user", parts=[types.Part(text=message_text)])
-
     final_response = ""
-    for event in runner.run(user_id="paciente", session_id="consultorio", new_message=content):
+    for event in runner.run(agent=_agent, user_id=user_id, session_id=session_id, new_message=content):
         if event.is_final_response():
             for part in event.content.parts:
                 if part.text is not None:
