@@ -447,7 +447,7 @@ if st.session_state.triagem_concluida:
 
     st.markdown("---")
     st.subheader("Procurar Hospitais e Clínicas Próximas?")
-    endereco_usuario = st.text_input("Se você quiser que eu busque hospitais ou clínicas próximas, por favor, me informe seu endereço (Ex: Rua Exemplo, 123, Bairro Feliz, Cidade, Estado):", key="endereco_input")
+    endereco_usuario = st.text_input("Se você quiser que eu busque hospitais ou clínicas próximas, por favor, me informe seu endereço (Ex: Rua Exemplo, Bairro Feliz, Cidade, Estado):", key="endereco_input")
 
     if st.button("Buscar Locais de Saúde", key="btn_buscar_locais"):
         if endereco_usuario:
