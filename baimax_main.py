@@ -20,7 +20,7 @@ except KeyError:
 # Assegura que a API Key esteja definida antes de criar o cliente genai
 if not os.environ.get("GOOGLE_API_KEY"):
     st.error("A GOOGLE_API_KEY não foi configurada. Por favor, adicione-a aos Streamlit Secrets ou como variável de ambiente.")
-    st.stop() # Interrompe a execução do script se a chave não estiver configurada
+    st.stop()
 
 from google import genai
 client = genai.Client()
@@ -29,12 +29,11 @@ MODEL_ID = "gemini-2.0-flash"
 
 # Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
 @st.cache_data(show_spinner=False)
-# A mudança está aqui: de 'agent' para '_agent'
 def call_agent(_agent: Agent, message_text: str) -> str:
-    # O restante da função permanece igual
+
     session_service = InMemorySessionService()
-    session = session_service.create_session(app_name=_agent.name, user_id="paciente", session_id="consultorio") # Use _agent aqui
-    runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service) # Use _agent aqui
+    session = session_service.create_session(app_name=_agent.name, user_id="paciente", session_id="consultorio")
+    runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service)
     content = types.Content(role="user", parts=[types.Part(text=message_text)])
 
     final_response = ""
@@ -46,7 +45,7 @@ def call_agent(_agent: Agent, message_text: str) -> str:
                     final_response += "\n"
     return final_response
 
-# Funções dos agentes (mantidas as instruções originais)
+# Funções dos agentes
 def agente_consultor(sintoma, informacoesDoUsuario):
     consultor = Agent(
         name="agente_consultor",
@@ -126,6 +125,7 @@ def agente_consultor(sintoma, informacoesDoUsuario):
         description="Agente consultor médico virtual para triagem inicial de sintomas.",
         tools=[google_search]
     )
+    # Chamando a função call_agent (executa o agente)
     entrada_do_agente_consultor = f"Sintoma: {sintoma}\nInformações do Usuário: {informacoesDoUsuario}"
     possiveis_causas = call_agent(consultor, entrada_do_agente_consultor)
     return possiveis_causas
@@ -133,7 +133,7 @@ def agente_consultor(sintoma, informacoesDoUsuario):
 def agente_validador(sintoma, possiveis_causas):
     planejador = Agent(
         name="agente_validador",
-        model=MODEL_ID, # Usando MODEL_ID
+        model=MODEL_ID,
         instruction="""
             Você é um Validador e Refinador de Informações Médicas AI. Sua tarefa é receber a saída de um agente de triagem inicial (Agente 1),
             que inclui informações do usuário, possíveis causas e as fontes consultadas. Seu objetivo é **validar** a coerência das causas com o contexto do usuário,
@@ -243,7 +243,7 @@ def agente_validador(sintoma, possiveis_causas):
 def agente_redator(sintoma, causas_validadas, informacoesDoUsuario):
     redator = Agent(
         name="agente_redator",
-        model=MODEL_ID, # Usando MODEL_ID
+        model=MODEL_ID,
         instruction="""
             Você é um Redator (Copywriter) de Comunicação de Saúde AI. Sua função é processar as informações validadas por um agente de triagem e validação (Agente 2) e comunicá-las ao usuário (paciente) final de forma clara,
             compreensível e, crucialmente, com um forte foco na segurança e na necessidade de buscar avaliação médica profissional. Sua linguagem deve ser acessível para uma pessoa sem conhecimento médico profundo.
@@ -332,7 +332,7 @@ def agente_redator(sintoma, causas_validadas, informacoesDoUsuario):
 def agente_navegador(sintoma, diagnostico, endereco_usuario):
     navegador = Agent(
         name="agente_navegador",
-        model="gemini-2.5-flash-preview-04-17", # Mantendo o modelo original para este agente, se preferir
+        model="gemini-2.5-flash-preview-04-17",
         instruction="""
             Você é um assistente útil que usa a ferramenta 'google_serach' para encontrar hospitais e clínicas perto de um endereço fornecido pelo usuário.
 
@@ -362,7 +362,7 @@ def agente_navegador(sintoma, diagnostico, endereco_usuario):
     return resultados_busca
 
 
-# --- Layout da Aplicação Streamlit ---
+# Aplicação do Streamlit
 st.set_page_config(page_title="bAImax - Seu Agente de Saúde", layout="centered")
 
 st.title("bAImax.")
@@ -382,7 +382,7 @@ with st.expander("👋 O que é o bAImax?"):
         """
     )
 
-    # --- Gerenciamento de Estado da Sessão ---
+    # Gerenciamento de Estado da Sessão
     if 'triagem_concluida' not in st.session_state:
         st.session_state.triagem_concluida = False
     if 'diagnostico_redator' not in st.session_state:
@@ -410,7 +410,7 @@ genero = st.selectbox("Gênero", ["Não informado", "Masculino", "Feminino"])
 pressao_arterial = st.text_input("Pressão Arterial (Ex: 120/80 ou 'Não informado')", value="Não informado")
 nivel_hidratacao = st.selectbox("Nível de Hidratação", ["Bem hidratado", "Pouco hidratado", "Desidratado"])
 
-# Juntando as informações do usuário em uma única string, como o agente espera
+# Juntando as informações do usuário em uma única string
 informacoes_do_usuario_str = (
     f"Idade: {idade} anos, Altura: {altura} cm, Peso: {peso} kg, Gênero: {genero}, "
     f"Pressão Arterial: {pressao_arterial}, Nível de Hidratação: {nivel_hidratacao}"
@@ -441,7 +441,7 @@ if st.button("Iniciar Triagem de Saúde"):
                 st.error("Ocorreu um erro durante o processamento da triagem. Por favor, tente novamente mais tarde.")
                 st.exception(e) # Exibe o traceback completo para depuração
 
-# --- Exibe o resultado da triagem e a opção de buscar locais APENAS SE a triagem_concluida for True ---
+# Exibe o resultado da triagem e a opção de buscar locais APENAS SE a triagem_concluida for True
 if st.session_state.triagem_concluida:
     st.markdown(st.session_state.diagnostico_redator, unsafe_allow_html=True) # Exibe o resultado do redator
 
@@ -459,7 +459,7 @@ if st.session_state.triagem_concluida:
                     st.markdown(rotas, unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Não foi possível buscar locais de saúde no momento. Erro: {e}.")
-                    st.exception(e) # Para exibir o traceback completo
+                    st.exception(e) # Exibir o traceback completo
         else:
             st.warning("Por favor, forneça seu endereço para buscar locais de saúde.")
 
