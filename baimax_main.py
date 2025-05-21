@@ -29,7 +29,6 @@ MODEL_ID = "gemini-2.5-flash-preview-04-17-thinking"
 
 
 # Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
-@st.cache_data(show_spinner=False)
 def call_agent(_agent: Agent, message_text: str) -> str:
     # Cria um serviço de sessão em memória
     session_service = InMemorySessionService()
@@ -656,8 +655,8 @@ if st.button("Iniciar Triagem de Saúde"):
 
                 # Armazena os resultados no session_state
                 st.session_state.diagnostico_redator = redator_output
-                st.session_state.sintoma_atual = sintoma # Guarda o sintoma também
-                st.session_state.triagem_concluida = True # Marca a triagem como concluída
+                st.session_state.sintoma_atual = sintoma
+                st.session_state.triagem_concluida = True
 
             except Exception as e:
                 st.error("Ocorreu um erro durante o processamento da triagem. Por favor, tente novamente mais tarde.")
