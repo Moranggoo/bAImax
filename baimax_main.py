@@ -29,6 +29,7 @@ MODEL_ID = "gemini-2.5-flash-preview-04-17-thinking"
 
 
 # Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
+@st.cache_data(show_spinner=False)
 def call_agent(_agent: Agent, message_text: str) -> str:
     # Cria um serviço de sessão em memória
     session_service = InMemorySessionService()
