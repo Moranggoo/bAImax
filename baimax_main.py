@@ -25,33 +25,29 @@ if not os.environ.get("GOOGLE_API_KEY"):
 
 from google import genai
 client = genai.Client()
-
-session_service = InMemorySessionService()
-runner = Runner(session_service=session_service)
-
 MODEL_ID = "gemini-2.5-flash-preview-04-17-thinking"
 
 
 # Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
-#@st.cache_data(show_spinner=False) # Remova o cache para testar inicialmente
+@st.cache_data(show_spinner=False)
 def call_agent(_agent: Agent, message_text: str) -> str:
-    session_id = "consultorio"
-    user_id = "paciente"
-
-    # Tenta obter a sessão, se não existir, cria uma
-    try:
-        session = session_service.get_session(app_name=_agent.name, user_id=user_id, session_id=session_id)
-    except KeyError:
-        session = session_service.create_session(app_name=_agent.name, user_id=user_id, session_id=session_id)
-
+    # Cria um serviço de sessão em memória
+    session_service = InMemorySessionService()
+    # Cria uma nova sessão (você pode personalizar os IDs conforme necessário)
+    session = session_service.create_session(app_name=_agent.name, user_id="user1", session_id="session1")
+    # Cria um Runner para o agente
+    runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service)
+    # Cria o conteúdo da mensagem de entrada
     content = types.Content(role="user", parts=[types.Part(text=message_text)])
+
     final_response = ""
-    for event in runner.run(agent=_agent, user_id=user_id, session_id=session_id, new_message=content):
+    # Itera assincronamente pelos eventos retornados durante a execução do agente
+    for event in runner.run(user_id="user1", session_id="session1", new_message=content):
         if event.is_final_response():
-            for part in event.content.parts:
-                if part.text is not None:
-                    final_response += part.text
-                    final_response += "\n"
+          for part in event.content.parts:
+            if part.text is not None:
+              final_response += part.text
+              final_response += "\n"
     return final_response
 
 # Funções dos agentes
