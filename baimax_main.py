@@ -27,36 +27,39 @@ from google import genai
 client = genai.Client()
 MODEL_ID = "gemini-2.5-flash-preview-04-17-thinking"
 
+session_service = InMemorySessionService()
 
-# Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
 @st.cache_data(show_spinner=False)
-def call_agent(_agent: Agent, message_text: str) -> str:
-    # Cria um serviço de sessão em memória
-    session_service = InMemorySessionService()
+# Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
+
+async def call_agent(agent: Agent, message_text: str) -> str:
+
     # Cria uma nova sessão (você pode personalizar os IDs conforme necessário)
-    session = session_service.create_session(app_name=_agent.name, user_id="user1", session_id="session1")
+    session = await session_service.create_session(app_name=agent.name, user_id="user1")
+
     # Cria um Runner para o agente
-    runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service)
+    runner = Runner(agent=agent, app_name=agent.name, session_service=session_service)
+
     # Cria o conteúdo da mensagem de entrada
     content = types.Content(role="user", parts=[types.Part(text=message_text)])
 
     final_response = ""
     # Itera assincronamente pelos eventos retornados durante a execução do agente
-    for event in runner.run(user_id="user1", session_id="session1", new_message=content):
+    async for event in runner.run_async(user_id="user1", session_id=session.id, new_message=content):
         if event.is_final_response():
           for part in event.content.parts:
             if part.text is not None:
               final_response += part.text
               final_response += "\n"
-    return final_response
+    return final_response    
 
 # Funções dos agentes
-def agente_consultor(sintoma, informacoesDoUsuario):
+async def agente_consultor(sintoma, informacoesDoUsuario):
     consultor = Agent(
         name="agente_consultor",
         model=MODEL_ID, # Usando MODEL_ID
         instruction="""
-             Contexto / Objetivo
+            Contexto / Objetivo
             Você é um Agente de Triagem Inicial de Saúde baseado em IA. Sua principal função é auxiliar na identificação de possíveis causas para um sintoma relatado por um usuário, com base em informações contextuais (idade, peso, altura, gênero, pressão arterial e nível de hidratação) e em pesquisa online.
             Este agente NÃO realiza diagnósticos e NÃO substitui profissionais de saúde. Seu papel é exclusivamente informativo e inicial.
 
@@ -182,10 +185,10 @@ def agente_consultor(sintoma, informacoesDoUsuario):
     )
     # Chamando a função call_agent (executa o agente)
     entrada_do_agente_consultor = f"Sintoma: {sintoma}\nInformações do Usuário: {informacoesDoUsuario}"
-    possiveis_causas = call_agent(consultor, entrada_do_agente_consultor)
+    possiveis_causas = await call_agent(consultor, entrada_do_agente_consultor)
     return possiveis_causas
 
-def agente_validador(sintoma, possiveis_causas):
+async def agente_validador(sintoma, possiveis_causas):
     planejador = Agent(
         name="agente_validador",
         model=MODEL_ID,
@@ -329,10 +332,10 @@ def agente_validador(sintoma, possiveis_causas):
     )
 
     entrada_do_agente_planejador = f"Sintoma: {sintoma}\nPossiveis causas: {possiveis_causas}"
-    causas_validadas = call_agent(planejador, entrada_do_agente_planejador)
+    causas_validadas = await call_agent(planejador, entrada_do_agente_planejador)
     return causas_validadas
 
-def agente_redator(sintoma, causas_validadas, informacoesDoUsuario):
+async def agente_redator(sintoma, causas_validadas, informacoesDoUsuario):
     redator = Agent(
         name="agente_redator",
         model="gemini-2.0-flash",
@@ -457,10 +460,10 @@ def agente_redator(sintoma, causas_validadas, informacoesDoUsuario):
         description="Agente redator de diagnósticos"
     )
     entrada_do_agente_redator = f"Sintoma: {sintoma}\nPossiveis causas: {causas_validadas}\nInformações do usuário: {informacoesDoUsuario}"
-    diagnostico = call_agent(redator, entrada_do_agente_redator)
-    return diagnostico
+    causas_finais = await call_agent(redator, entrada_do_agente_redator)
+    return causas_finais
 
-def agente_navegador(sintoma, diagnostico, endereco_usuario):
+async def agente_navegador(sintoma, diagnostico, endereco_usuario):
     navegador = Agent(
         name="agente_navegador",
         model=MODEL_ID,
@@ -541,7 +544,7 @@ def agente_navegador(sintoma, diagnostico, endereco_usuario):
     )
 
     entrada_do_agente_navegador = f"Sintoma: {sintoma}\nDiagnóstico: {diagnostico}\nEndereço: {endereco_usuario}"
-    resultados_busca = call_agent(navegador, entrada_do_agente_navegador)
+    resultados_busca = await call_agent(navegador, entrada_do_agente_navegador)
     return resultados_busca
 
 
