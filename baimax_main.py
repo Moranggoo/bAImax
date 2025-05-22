@@ -639,33 +639,31 @@ informacoes_do_usuario_str = (
     f"Idade: {idade} anos, Altura: {altura} cm, Peso: {peso} kg, Gênero: {genero}, "
     f"Pressão Arterial: {pressao_arterial}, Nível de Hidratação: {nivel_hidratacao}"
 )
-async def iniciar_triagem():
+
+# Botão para iniciar a triagem
+if st.button("Iniciar Triagem de Saúde", key="btn_triagem"):
     if not sintoma:
         st.warning("Por favor, digite sua queixa principal (sintoma) para iniciar a triagem.")
     else:
         with st.spinner("Analisando suas informações... isso pode levar um momento."):
             try:
                 # Agente 1: Consultor
-                possiveis_causas = await agente_consultor(sintoma, informacoes_do_usuario_str)
+                possiveis_causas = asyncio.run(agente_consultor(sintoma, informacoes_do_usuario_str))
 
                 # Agente 2: Validador
-                validacao_completa_texto = await agente_validador(sintoma, possiveis_causas)
+                validacao_completa_texto = asyncio.run(agente_validador(sintoma, possiveis_causas))
 
                 # Agente 3: Redator
-                redator_output = await agente_redator(sintoma, validacao_completa_texto, informacoes_do_usuario_str)
+                redator_output = asyncio.run(agente_redator(sintoma, validacao_completa_texto, informacoes_do_usuario_str))
 
                 # Armazena os resultados no session_state
                 st.session_state.diagnostico_redator = redator_output
-                st.session_state.sintoma_atual = sintoma
-                st.session_state.triagem_concluida = True
+                st.session_state.sintoma_atual = sintoma # Guarda o sintoma também
+                st.session_state.triagem_concluida = True # Marca a triagem como concluída
 
             except Exception as e:
                 st.error("Ocorreu um erro durante o processamento da triagem. Por favor, tente novamente mais tarde.")
-                st.exception(e) # Exibe o traceback completo para depuração
-
-# Botão para iniciar a triagem
-st.button("Iniciar Triagem de Saúde", on_click=lambda: asyncio.run(iniciar_triagem()))
-
+                st.exception(e)
 
 # Exibe o resultado da triagem e a opção de buscar locais APENAS SE a triagem_concluida for True
 if st.session_state.triagem_concluida:
@@ -681,7 +679,7 @@ if st.session_state.triagem_concluida:
                 try:
                     # Agente 4: Navegador
                     # Usa st.session_state.sintoma_atual e st.session_state.diagnostico_redator
-                    rotas = agente_navegador(st.session_state.sintoma_atual, st.session_state.diagnostico_redator, endereco_usuario)
+                    rotas = asyncio.run(agente_navegador(st.session_state.sintoma_atual, st.session_state.diagnostico_redator, endereco_usuario))
                     st.markdown(rotas, unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Não foi possível buscar locais de saúde no momento. Erro: {e}.")
