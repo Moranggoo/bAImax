@@ -34,7 +34,7 @@ session_service = InMemorySessionService()
 async def call_agent(_agent: Agent, message_text: str) -> str:
 
     # Cria uma nova sessão (você pode personalizar os IDs conforme necessário)
-    session = session_service.create_session(app_name=_agent.name, user_id="user1")
+    session = await session_service.create_session(app_name=_agent.name, user_id="user1")
 
     # Cria um Runner para o agente
     runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service)
