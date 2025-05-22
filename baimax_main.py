@@ -640,27 +640,21 @@ informacoes_do_usuario_str = (
     f"Pressão Arterial: {pressao_arterial}, Nível de Hidratação: {nivel_hidratacao}"
 )
 
-# Botão para iniciar a triagem
+async def processar_triagem(sintoma, informacoes_do_usuario_str):
+    possiveis_causas = await agente_consultor(sintoma, informacoes_do_usuario_str)
+    validacao_completa_texto = await agente_validador(sintoma, possiveis_causas)
+    redator_output = await agente_redator(sintoma, validacao_completa_texto, informacoes_do_usuario_str)
+    st.session_state.diagnostico_redator = redator_output
+    st.session_state.sintoma_atual = sintoma
+    st.session_state.triagem_concluida = True
+
 if st.button("Iniciar Triagem de Saúde", key="btn_triagem"):
     if not sintoma:
         st.warning("Por favor, digite sua queixa principal (sintoma) para iniciar a triagem.")
     else:
         with st.spinner("Analisando suas informações... isso pode levar um momento."):
             try:
-                # Agente 1: Consultor
-                possiveis_causas = asyncio.run(agente_consultor(sintoma, informacoes_do_usuario_str))
-
-                # Agente 2: Validador
-                validacao_completa_texto = asyncio.run(agente_validador(sintoma, possiveis_causas))
-
-                # Agente 3: Redator
-                redator_output = asyncio.run(agente_redator(sintoma, validacao_completa_texto, informacoes_do_usuario_str))
-
-                # Armazena os resultados no session_state
-                st.session_state.diagnostico_redator = redator_output
-                st.session_state.sintoma_atual = sintoma # Guarda o sintoma também
-                st.session_state.triagem_concluida = True # Marca a triagem como concluída
-
+                asyncio.run(processar_triagem(sintoma, informacoes_do_usuario_str))
             except Exception as e:
                 st.error("Ocorreu um erro durante o processamento da triagem. Por favor, tente novamente mais tarde.")
                 st.exception(e)
