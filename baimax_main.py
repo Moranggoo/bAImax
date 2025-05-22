@@ -7,7 +7,7 @@ from google.adk.tools import google_search
 from google.genai import types
 import textwrap
 import warnings
-
+import asyncio
 
 warnings.filterwarnings("ignore")
 
@@ -29,16 +29,15 @@ MODEL_ID = "gemini-2.5-flash-preview-04-17-thinking"
 
 session_service = InMemorySessionService()
 
-@st.cache_data(show_spinner=False)
 # Função auxiliar que envia uma mensagem para um agente via Runner e retorna a resposta final
-
-async def call_agent(agent: Agent, message_text: str) -> str:
+@st.cache_resource(show_spinner=False)
+async def call_agent(_agent: Agent, message_text: str) -> str:
 
     # Cria uma nova sessão (você pode personalizar os IDs conforme necessário)
-    session = await session_service.create_session(app_name=agent.name, user_id="user1")
+    session = session_service.create_session(app_name=_agent.name, user_id="user1")
 
     # Cria um Runner para o agente
-    runner = Runner(agent=agent, app_name=agent.name, session_service=session_service)
+    runner = Runner(agent=_agent, app_name=_agent.name, session_service=session_service)
 
     # Cria o conteúdo da mensagem de entrada
     content = types.Content(role="user", parts=[types.Part(text=message_text)])
@@ -640,22 +639,20 @@ informacoes_do_usuario_str = (
     f"Idade: {idade} anos, Altura: {altura} cm, Peso: {peso} kg, Gênero: {genero}, "
     f"Pressão Arterial: {pressao_arterial}, Nível de Hidratação: {nivel_hidratacao}"
 )
-
-# Botão para iniciar a triagem
-if st.button("Iniciar Triagem de Saúde"):
+async def iniciar_triagem():
     if not sintoma:
         st.warning("Por favor, digite sua queixa principal (sintoma) para iniciar a triagem.")
     else:
         with st.spinner("Analisando suas informações... isso pode levar um momento."):
             try:
                 # Agente 1: Consultor
-                possiveis_causas = agente_consultor(sintoma, informacoes_do_usuario_str)
+                possiveis_causas = await agente_consultor(sintoma, informacoes_do_usuario_str)
 
                 # Agente 2: Validador
-                validacao_completa_texto = agente_validador(sintoma, possiveis_causas)
+                validacao_completa_texto = await agente_validador(sintoma, possiveis_causas)
 
                 # Agente 3: Redator
-                redator_output = agente_redator(sintoma, validacao_completa_texto, informacoes_do_usuario_str)
+                redator_output = await agente_redator(sintoma, validacao_completa_texto, informacoes_do_usuario_str)
 
                 # Armazena os resultados no session_state
                 st.session_state.diagnostico_redator = redator_output
@@ -665,6 +662,10 @@ if st.button("Iniciar Triagem de Saúde"):
             except Exception as e:
                 st.error("Ocorreu um erro durante o processamento da triagem. Por favor, tente novamente mais tarde.")
                 st.exception(e) # Exibe o traceback completo para depuração
+
+# Botão para iniciar a triagem
+st.button("Iniciar Triagem de Saúde", on_click=lambda: asyncio.run(iniciar_triagem()))
+
 
 # Exibe o resultado da triagem e a opção de buscar locais APENAS SE a triagem_concluida for True
 if st.session_state.triagem_concluida:
